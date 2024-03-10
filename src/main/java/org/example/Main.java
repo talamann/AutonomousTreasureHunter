@@ -32,76 +32,52 @@ class Location {
     }
 }
 //search c
-class dfs {
-    static int ROW = 30;
-    static int COL = 30;
-    static int dRow[] = { 0, 1, 0, -1 };
-    static int dCol[] = { 1, 0, -1, 0 };
+class DepthFirstSearch {
 
+    // Function to perform DFS
+    public static void DFS(char[][] grid, int row, int col, boolean[][] visited, ArrayList<Location> path, ArrayList<int[]> targets) {
+        int numRows = grid.length;
+        int numCols = grid[0].length;
 
-    static Boolean isValid(int row, int col) {
-        // If cell is out of bounds
-        if (row < 0 || col < 0 || row >= ROW || col >= COL)
-            return false;
-
-        // Otherwise, it can be visited
-        return true;
-    }
-
-    // Function to perform DFS Traversal on the matrix grid[]
-    static List<Location> findShortestPath(char[][] grid, Location start, Location target) {
-        Boolean[][] visited = new Boolean[ROW][COL];
-        for (int i = 0; i < ROW; i++) {
-            for (int j = 0; j < COL; j++) {
-                visited[i][j] = false;
-            }
+        // Check if the current position is within the bounds of the grid and not visited
+        if (row < 0 || col < 0 || row >= numRows || col >= numCols || visited[row][col] || grid[row][col] == 0) {
+            return;
         }
-        Stack<Location> stack = new Stack<>();
-        Map<Location, Location> parentMap = new HashMap<>();
 
-        stack.push(start);
+        // Mark the current position as visited
+        visited[row][col] = true;
 
-        while (!stack.empty()) {
-            Location curr = stack.pop();
-            int row = curr.getX();
-            int col = curr.getY();
+        // Add the current position to the path
+        path.add(new Location(row,col));
 
-            if (row == target.getX() && col == target.getY()) {
-                return constructPath(parentMap, target);
-            }
-
-            if (!isValid(row, col) || visited[row][col] || grid[row][col]=='O') {
-                continue;
-            }
-
-            visited[row][col] = true;
-            System.out.print(row+","+col + "-");
-
-            // Push all the adjacent cells
-            for (int i = 0; i < 4; i++) {
-                int adjx = row + dRow[i];
-                int adjy = col + dCol[i];
-                stack.push(new Location(adjx, adjy));
-                parentMap.put(new Location(adjx, adjy), curr);
+        // Check if the current position is one of the target positions
+        for (int[] target : targets) {
+            if (row == target[0] && col == target[1]) {
+                System.out.println("Target found at position (" + row + ", " + col + ")");
+                for (Location p: path) {
+                    //visited[p.getX()][p.getY()] = false;
+                    System.out.println("Path:"+p.getX()+","+p.getY());
+                }
+                path.clear();
+                // Assuming you want to continue searching for other targets, you may remove the target from the list.
+                break; // Break the loop after finding the target
             }
         }
 
-        return null; // No path found
+        // Perform DFS recursively in all four directions
+        DFS(grid, row + 1, col, visited, path, targets); // Down
+        DFS(grid, row - 1, col, visited, path, targets); // Up
+        DFS(grid, row, col + 1, visited, path, targets); // Right
+        DFS(grid, row, col - 1, visited, path, targets); // Left
+
+        // If no target found in this path, remove the last position from the path
+        if(path.size()!=0)
+        path.remove(path.size() - 1);
     }
+}
 
     // Helper method to construct the path
-    static List<Location> constructPath(Map<Location, Location> parentMap, Location target) {
-        List<Location> path = new ArrayList<>();
-        Location current = target;
-        while (parentMap.containsKey(current)) {
-            path.add(current);
-            current = parentMap.get(current);
-        }
-        Collections.reverse(path);
-        return path;
-    }
 
-}
 
 // Character class
 class Character {
@@ -224,10 +200,17 @@ public class Main {
     public static void main(String[] args) {
         try {
             // Read the text file representing the grid
-            char[][] map = readGridFromFile("C:\\Users\\Emre\\Desktop\\matrix.txt");
-            dfs s = new dfs();
-            dfs.findShortestPath(map,new Location(0,0),searchForGridValue(map,'G'));
+            char[][] map = readGridFromFile("C:\\Users\\Emre\\Desktop\\matrix2.txt");
+            boolean[][] visited = new boolean[map.length][map[0].length];
+            ArrayList<int[]> targets = new ArrayList<>();
+            ArrayList<Location> path = new ArrayList<>();
+            targets.add(new int[]{5, 12}); // First target
+            targets.add(new int[]{11, 11}); // Second target
 
+            // Perform DFS for each target
+            for (int[] target : targets) {
+                DepthFirstSearch.DFS(map, 0, 0, visited, path,targets);
+            }
         } catch (FileNotFoundException e) {
             System.err.println("File not found: " + e.getMessage());
         }
@@ -244,20 +227,23 @@ public class Main {
         }
 
         scanner.close();
+
         return grid;
     }
 
     // Method to search for a grid value in the map
-    private static Location searchForGridValue(char[][] map, char value) {
+    private static ArrayList<int[]> searchForGridValue(char[][] map, char value) {
+        ArrayList<int[]> loclist = new ArrayList<>();
         for (int i = 0; i < map.length; i++) {
             for (int j = 0; j < map[0].length; j++) {
                 if (map[i][j] == value) {
-                    return new Location(i,j);
+                    System.out.println("HERE:"+i+","+j);
+                    loclist.add(new int[]{i,j});
                 }
 
             }
         }
-        return null;
+        return loclist;
     }
 }
 
