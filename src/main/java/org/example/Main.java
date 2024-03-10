@@ -31,7 +31,7 @@ class Location {
 class Character {
     private String id;
     private Location location;
-    private Queue<Treasure> discovered = new LinkedList<>();
+    private Queue<Treasure> discovered;
 
     public Character(String id, Location location, Queue<Treasure> discovered) {
         this.id = id;
