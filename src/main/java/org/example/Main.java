@@ -1,5 +1,4 @@
 package org.example;
-
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.KeyEvent;
@@ -11,21 +10,25 @@ import java.util.Scanner;
 import java.util.Stack;
 
 public class Main extends JPanel implements KeyListener {
-
     private static final int CELL_SIZE = 30;
-    private static char[][] grid;
+    static char[][] grid;
     private static boolean[][] visited;
-    private static int numRows;
-    private static int numCols;
+    static int numRows;
+    static int numCols;
     private static final int TREASURE_LIMIT = 3; // Change this value to set the limit of treasures to find
     private static int treasureFoundCount = 0;
     private static Stack<int[]> path = new Stack<>();
     private static int currentStep = 0;
+    private static DynamicObstacle dynamicObstacle;
 
     public static void main(String[] args) {
+
         try {
             readGridFromFile("C:\\Users\\Emre\\Desktop\\matrix2.txt"); // Provide the path to your grid text file
             System.out.println("Grid from file:");
+
+            // Initialize the dynamic obstacle
+            dynamicObstacle = new DynamicObstacle(new Location(0, 1), 2);
 
             // Perform DFS from each cell of the grid
             iterativeDFS(0, 0);
@@ -36,8 +39,7 @@ public class Main extends JPanel implements KeyListener {
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 
         Main mainPanel = new Main();
-        JScrollPane scrollPane = new JScrollPane(mainPanel);
-        frame.getContentPane().add(scrollPane);
+        frame.getContentPane().add(mainPanel);
         frame.pack();
 
         frame.setLocationRelativeTo(null); // Center the frame
@@ -100,10 +102,11 @@ public class Main extends JPanel implements KeyListener {
                 System.out.println("Treasure found at: (" + row + ", " + col + ")");
                 treasureFoundCount++;
                 resetVisitedCells();
-                grid[row][col] = 'F';
-                visited[row][col] = true;
                 continue;
             }
+
+            // Move the dynamic obstacle
+            dynamicObstacle.move();
 
             // Push neighbors onto the stack
             stack.push(new int[]{row + 1, col}); // Down
@@ -153,7 +156,7 @@ public class Main extends JPanel implements KeyListener {
                         g.setColor(Color.WHITE);
                         g.fillRect(x, y, CELL_SIZE, CELL_SIZE);
                         break;
-                    case 'F':
+                    case 'G':
                         g.setColor(Color.YELLOW);
                         g.fillOval(x + 5, y + 5, CELL_SIZE - 10, CELL_SIZE - 10);
                         break;
@@ -161,22 +164,10 @@ public class Main extends JPanel implements KeyListener {
                         break;
                 }
 
-                // Highlight visited cells as red lines
-                if (grid[i][j] == '.') {
+                // Draw dynamic obstacle
+                if (i == dynamicObstacle.getLocation().getX() && j == dynamicObstacle.getLocation().getY()) {
                     g.setColor(Color.RED);
-                    g.drawLine(x, y, x + CELL_SIZE, y + CELL_SIZE);
-                    g.drawLine(x, y + CELL_SIZE, x + CELL_SIZE, y);
-                }
-
-                // Highlight current step with blue color
-                if (currentStep < path.size()) {
-                    int[] step = path.get(currentStep);
-                    int row = step[0];
-                    int col = step[1];
-                    if (i == row && j == col) {
-                        g.setColor(Color.BLUE);
-                        g.fillRect(x, y, CELL_SIZE, CELL_SIZE);
-                    }
+                    g.fillRect(x, y, CELL_SIZE, CELL_SIZE);
                 }
             }
         }
@@ -192,209 +183,171 @@ public class Main extends JPanel implements KeyListener {
 
     @Override
     public void keyPressed(KeyEvent e) {
-        if (e.getKeyCode() == KeyEvent.VK_RIGHT) {
-            if (currentStep < path.size() - 1) {
-                currentStep++;
-                int[] step = path.get(currentStep);
-                int row = step[0];
-                int col = step[1];
-                System.out.println("Step " + currentStep + ": Move to cell (" + row + ", " + col + ")");
-                Main.getInstance().repaint();
-            }
-        } else if (e.getKeyCode() == KeyEvent.VK_LEFT) {
-            if (currentStep > 0) {
-                currentStep--;
-                int[] step = path.get(currentStep);
-                int row = step[0];
-                int col = step[1];
-                System.out.println("Step " + currentStep + ": Move to cell (" + row + ", " + col + ")");
-                Main.getInstance().repaint();
-            }
-        }
     }
-
 
     @Override
     public void keyReleased(KeyEvent e) {
     }
+}
 
+class Location {
+    private int x;
+    private int y;
 
-    class Location {
-        private int x;
-        private int y;
-
-        public Location(int x, int y) {
-            this.x = x;
-            this.y = y;
-        }
-
-        public int getX() {
-            return x;
-        }
-
-        public int getY() {
-            return y;
-        }
-    }
-    class Character {
-        private String id;
-        private Location location;
-        private ArrayList<Treasure> discovered;
-
-        public Character(String id, Location location, ArrayList<Treasure> discovered) {
-            this.id = id;
-            this.location = location;
-            this.discovered = discovered;
-        }
-
-        public String getId() {
-            return id;
-        }
-
-        public Location getLocation() {
-            return location;
-        }
-
-        public void setLocation(Location location) {
-            this.location = location;
-        }
-
+    public Location(int x, int y) {
+        this.x = x;
+        this.y = y;
     }
 
-
-    // Obstacle class (abstract)
-    abstract class Obstacle {
-        protected Location location;
-
-        public Obstacle(Location location) {
-            this.location = location;
-        }
-
-        public Location getLocation() {
-            return location;
-        }
-
-        // Method to check if character can pass through
-        public abstract boolean canPassThrough();
+    public int getX() {
+        return x;
     }
 
-    //hareket etmeyecek engeller
-    class StaticObstacle extends Obstacle {
-        public StaticObstacle(Location location) {
-            super(location);
-        }
-
-        @Override
-        public boolean canPassThrough() {
-            return false;
-        }
-    }
-
-    // dinamik engeller
-    class DynamicObstacle extends Obstacle {
-        private int movementRange;
-        private int lastMoveDirection = -1; // Initialize with an invalid direction
-
-        public DynamicObstacle(Location location, int movementRange) {
-            super(location);
-            this.movementRange = movementRange;
-        }
-
-        @Override
-        public boolean canPassThrough() {
-            return false;
-        }
-
-        // Method to move dynamic obstacle
-        public void move() {
-            int moveDirection;
-
-            // Choose a random direction different from the last move direction
-            do {
-                moveDirection = (int) (Math.random() * 4);
-            } while (moveDirection == lastMoveDirection);
-
-            // Update the cell value in the grid before moving
-            updateGridCell(location, '.');
-
-            switch (moveDirection) {
-                case 0: // Move up
-                    if (location.getX() - 1 >= 0) {
-                        location = new Location(location.getX() - 1, location.getY());
-                        System.out.println("Dynamic obstacle moved up.");
-                    } else {
-                        location = new Location(location.getX() + 1, location.getY()); // Move in opposite direction
-                        System.out.println("Dynamic obstacle exceeded movement range and moved down.");
-                    }
-                    break;
-                case 1: // Move down
-                    if (location.getX() + 1 < Main.numRows) {
-                        location = new Location(location.getX() + 1, location.getY());
-                        System.out.println("Dynamic obstacle moved down.");
-                    } else {
-                        location = new Location(location.getX() - 1, location.getY()); // Move in opposite direction
-                        System.out.println("Dynamic obstacle exceeded movement range and moved up.");
-                    }
-                    break;
-                case 2: // Move left
-                    if (location.getY() - 1 >= 0) {
-                        location = new Location(location.getX(), location.getY() - 1);
-                        System.out.println("Dynamic obstacle moved left.");
-                    } else {
-                        location = new Location(location.getX(), location.getY() + 1); // Move in opposite direction
-                        System.out.println("Dynamic obstacle exceeded movement range and moved right.");
-                    }
-                    break;
-                case 3: // Move right
-                    if (location.getY() + 1 < Main.numCols) {
-                        location = new Location(location.getX(), location.getY() + 1);
-                        System.out.println("Dynamic obstacle moved right.");
-                    } else {
-                        location = new Location(location.getX(), location.getY() - 1); // Move in opposite direction
-                        System.out.println("Dynamic obstacle exceeded movement range and moved left.");
-                    }
-                    break;
-                default:
-                    break;
-            }
-
-            // Update the cell value in the grid after moving
-            updateGridCell(location, 'X');
-
-            lastMoveDirection = moveDirection; // Update last move direction
-        }
-
-        // Method to update the cell value in the grid
-        private void updateGridCell(Location location, char value) {
-            Main.grid[location.getX()][location.getY()] = value;
-        }
-    }
-
-    // Treasure class representing different types of treasures
-    class Treasure {
-        private String type;
-        private Location location;
-
-        public Treasure(String type, Location location) {
-            this.type = type;
-            this.location = location;
-        }
-
-        public String getType() {
-            return type;
-        }
-
-        public Location getLocation() {
-            return location;
-        }
-
-        // Override toString method to print treasure details
-        @Override
-        public String toString() {
-            return type + " found at " + location.toString();
-        }
+    public int getY() {
+        return y;
     }
 }
+
+abstract class Obstacle {
+    protected Location location;
+
+    public Obstacle(Location location) {
+        this.location = location;
+    }
+
+    public Location getLocation() {
+        return location;
+    }
+
+    public abstract boolean canPassThrough();
+}
+
+class DynamicObstacle extends Obstacle {
+    private int movementRange;
+    private int lastMoveDirection = -1; // Initialize with an invalid direction
+
+    public DynamicObstacle(Location location, int movementRange) {
+        super(location);
+        this.movementRange = movementRange;
+    }
+
+    @Override
+    public boolean canPassThrough() {
+        return false;
+    }
+
+    // Method to move dynamic obstacle
+    public void move() {
+        int moveDirection;
+
+        // Choose a random direction different from the last move direction
+        do {
+            moveDirection = (int) (Math.random() * 4);
+        } while (moveDirection == lastMoveDirection);
+
+        // Update the cell value in the grid before moving
+        updateGridCell(location, '.');
+
+        switch (moveDirection) {
+            case 0: // Move up
+                if (location.getX() - 1 >= 0) {
+                    location = new Location(location.getX() - 1, location.getY());
+                    System.out.println("Dynamic obstacle moved up.");
+                } else {
+                    location = new Location(location.getX() + 1, location.getY()); // Move in opposite direction
+                    System.out.println("Dynamic obstacle exceeded movement range and moved down.");
+                }
+                break;
+            case 1: // Move down
+                if (location.getX() + 1 < Main.numRows) {
+                    location = new Location(location.getX() + 1, location.getY());
+                    System.out.println("Dynamic obstacle moved down.");
+                } else {
+                    location = new Location(location.getX() - 1, location.getY()); // Move in opposite direction
+                    System.out.println("Dynamic obstacle exceeded movement range and moved up.");
+                }
+                break;
+            case 2: // Move left
+                if (location.getY() - 1 >= 0) {
+                    location = new Location(location.getX(), location.getY() - 1);
+                    System.out.println("Dynamic obstacle moved left.");
+                } else {
+                    location = new Location(location.getX(), location.getY() + 1); // Move in opposite direction
+                    System.out.println("Dynamic obstacle exceeded movement range and moved right.");
+                }
+                break;
+            case 3: // Move right
+                if (location.getY() + 1 < Main.numCols) {
+                    location = new Location(location.getX(), location.getY() + 1);
+                    System.out.println("Dynamic obstacle moved right.");
+                } else {
+                    location = new Location(location.getX(), location.getY() - 1); // Move in opposite direction
+                    System.out.println("Dynamic obstacle exceeded movement range and moved left.");
+                }
+                break;
+            default:
+                break;
+        }
+
+        // Update the cell value in the grid after moving
+        updateGridCell(location, 'X');
+
+        lastMoveDirection = moveDirection; // Update last move direction
+    }
+
+    // Method to update the cell value in the grid
+    private void updateGridCell(Location location, char value) {
+        Main.grid[location.getX()][location.getY()] = value;
+    }
+}
+class Treasure {
+    private String type;
+    private Location location;
+
+    public Treasure(String type, Location location) {
+        this.type = type;
+        this.location = location;
+    }
+
+    public String getType() {
+        return type;
+    }
+
+    public Location getLocation() {
+        return location;
+    }
+
+    // Override toString method to print treasure details
+    @Override
+    public String toString() {
+        return type + " found at " + location.toString();
+    }
+}
+class Character {
+    private String id;
+    private Location location;
+    private ArrayList<Treasure> discovered;
+
+    public Character(String id, Location location, ArrayList<Treasure> discovered) {
+        this.id = id;
+        this.location = location;
+        this.discovered = discovered;
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public Location getLocation() {
+        return location;
+    }
+
+    public void setLocation(Location location) {
+        this.location = location;
+    }
+
+}    // Treasure class representing different types of treasures
+
 
 
 
