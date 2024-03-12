@@ -293,6 +293,7 @@ public class Main extends JPanel implements KeyListener {
     // dinamik engeller
     class DynamicObstacle extends Obstacle {
         private int movementRange;
+        private int lastMoveDirection = -1; // Initialize with an invalid direction
 
         public DynamicObstacle(Location location, int movementRange) {
             super(location);
@@ -304,26 +305,69 @@ public class Main extends JPanel implements KeyListener {
             return false;
         }
 
-        // Method to move dynamic obstacle up
-        public void moveUp() {
-            location = new Location(location.getX(), location.getY() - 1);
+        // Method to move dynamic obstacle
+        public void move() {
+            int moveDirection;
+
+            // Choose a random direction different from the last move direction
+            do {
+                moveDirection = (int) (Math.random() * 4);
+            } while (moveDirection == lastMoveDirection);
+
+            // Update the cell value in the grid before moving
+            updateGridCell(location, '.');
+
+            switch (moveDirection) {
+                case 0: // Move up
+                    if (location.getX() - 1 >= 0) {
+                        location = new Location(location.getX() - 1, location.getY());
+                        System.out.println("Dynamic obstacle moved up.");
+                    } else {
+                        location = new Location(location.getX() + 1, location.getY()); // Move in opposite direction
+                        System.out.println("Dynamic obstacle exceeded movement range and moved down.");
+                    }
+                    break;
+                case 1: // Move down
+                    if (location.getX() + 1 < Main.numRows) {
+                        location = new Location(location.getX() + 1, location.getY());
+                        System.out.println("Dynamic obstacle moved down.");
+                    } else {
+                        location = new Location(location.getX() - 1, location.getY()); // Move in opposite direction
+                        System.out.println("Dynamic obstacle exceeded movement range and moved up.");
+                    }
+                    break;
+                case 2: // Move left
+                    if (location.getY() - 1 >= 0) {
+                        location = new Location(location.getX(), location.getY() - 1);
+                        System.out.println("Dynamic obstacle moved left.");
+                    } else {
+                        location = new Location(location.getX(), location.getY() + 1); // Move in opposite direction
+                        System.out.println("Dynamic obstacle exceeded movement range and moved right.");
+                    }
+                    break;
+                case 3: // Move right
+                    if (location.getY() + 1 < Main.numCols) {
+                        location = new Location(location.getX(), location.getY() + 1);
+                        System.out.println("Dynamic obstacle moved right.");
+                    } else {
+                        location = new Location(location.getX(), location.getY() - 1); // Move in opposite direction
+                        System.out.println("Dynamic obstacle exceeded movement range and moved left.");
+                    }
+                    break;
+                default:
+                    break;
+            }
+
+            // Update the cell value in the grid after moving
+            updateGridCell(location, 'X');
+
+            lastMoveDirection = moveDirection; // Update last move direction
         }
 
-        // Method to move dynamic obstacle down
-        public void moveDown() {
-            location = new Location(location.getX(), location.getY() + 1);
+        // Method to update the cell value in the grid
+        private void updateGridCell(Location location, char value) {
+            Main.grid[location.getX()][location.getY()] = value;
         }
-
-        // Method to move dynamic obstacle left
-        public void moveLeft() {
-            location = new Location(location.getX() - 1, location.getY());
-        }
-
-        // Method to move dynamic obstacle right
-        public void moveRight() {
-            location = new Location(location.getX() + 1, location.getY());
-        }
-
     }
 
     // Treasure class representing different types of treasures
